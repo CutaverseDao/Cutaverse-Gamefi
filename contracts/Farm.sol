@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 import "./Seed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./Token.sol";
+import "./TokenV2.sol";
 
 contract Farm is Ownable{
 
@@ -15,6 +15,14 @@ contract Farm is Ownable{
         uint harvestAt;
         // 0表示空闲，1表示成长中
         uint status;
+        //uint rate;
+    }
+
+
+    struct PlantSeed {
+        Seed fruit;
+        //创建时间
+        uint index;
 
         //uint rate;
     }
@@ -29,6 +37,8 @@ contract Farm is Ownable{
 
     mapping(address => uint256) accountSquareLength;
 
+    mapping(address => mapping(uint256 => Square)) accountSquareMapping;
+
     constructor (TokenV2 _token,uint256 _squareLength) {
         harvestToken = _token;
         squareLength = _squareLength;
@@ -36,7 +46,7 @@ contract Farm is Ownable{
 
 
     //记录土地
-    mapping(address => Square[]) fields;
+    //mapping(address => Square[]) fields;
 
     mapping(address => bool) seedValidityMapping;
 
@@ -62,7 +72,6 @@ contract Farm is Ownable{
 
     //初始创建农场
     function createFarm(address payable _account) public payable{
-        Square[] storage land = fields[msg.sender];
         Square memory empty = Square({
         fruit: Seed(address(0)),
         createdAt: 0,
@@ -70,46 +79,36 @@ contract Farm is Ownable{
         status: 0
         });
 
-        for (uint j=0; j < squareLength; j += 1) {
-            land.push(empty);
+        for (uint j=1; j <= squareLength; j ++) {
+            accountSquareMapping[msg.sender][j] = empty;
         }
         accountSquareLength[msg.sender] = squareLength;
         farmerCnt += 1;
     }
 
     //种植方法
-    function plant(Square[] memory squares) public {
-        uint256 len = squares.length;
+    function plant(PlantSeed[] memory plantSeed) public {
+        uint256 len = plantSeed.length;
         require(len > 0 && len <= accountSquareLength[msg.sender],"plant seed is null");
-        Square[] storage afterLand = new Square[](squares.length);
-        for(uint i = 0;i<len;i++){
-            Square memory accountSquare = squares[i];
-            if(accountSquare.status == 1){
-                afterLand[i]= accountSquare;
-                continue;
-            }
-            require(seedValidityMapping[address(accountSquare.fruit)],"this fruit is invalid");
-            accountSquare.createdAt = block.timestamp;
-            accountSquare.harvestAt = block.timestamp + ISeed(accountSquare.fruit).harvestAt();
-            accountSquare.status = 1;
-            accountSquare.fruit.burn(msg.sender,1);
-            afterLand[i]= accountSquare;
-            emit plantFruit(msg.sender,address(accountSquare.fruit),block.timestamp);
+
+        for(uint i =0 ;i < len;i++){
+            Square memory accountIndexSquare = accountSquareMapping[msg.sender][plantSeed[i].index];
+            accountIndexSquare.fruit = plantSeed[i].fruit;
+            accountIndexSquare.createdAt = block.timestamp;
+            accountIndexSquare.harvestAt = block.timestamp + ISeed(accountIndexSquare.fruit).harvestAt();
+            accountIndexSquare.status = 1;
+            accountIndexSquare.fruit.burn(msg.sender,1);
+            emit plantFruit(msg.sender,address(accountIndexSquare.fruit),block.timestamp);
         }
-        fields[msg.sender] = afterLand;
     }
 
     //收获方法
     function harvest() public{
-        Square[] storage beforeLand = fields[msg.sender];
-        uint256 length = beforeLand.length;
-        require(length > 0 && length <= squareLength,"plant seed is null");
-        Square[] storage afterLand = new Square[](beforeLand.length);
+        uint length = accountSquareLength[msg.sender];
 
-        for(uint i = 0;i<length;i++){
-            Square memory accountSquare = beforeLand[i];
+        for(uint i = 1;i <= length; i++){
+            Square memory accountSquare = accountSquareMapping[msg.sender][i];
             if(accountSquare.status == 0){
-                afterLand[i] = accountSquare;
                 continue;
             }
             require(seedValidityMapping[address(accountSquare.fruit)],"this fruit is invalid");
@@ -120,10 +119,9 @@ contract Farm is Ownable{
 
                 harvestToken.mint(msg.sender,accountSquare.fruit.harvestAmount());
                 emit harvestFruit(msg.sender,address(accountSquare.fruit),block.timestamp);
+                accountSquareMapping[msg.sender][i] = accountSquare;
             }
-            afterLand[i] = accountSquare;
         }
-        fields[msg.sender] = afterLand;
     }
 
     //购买种子，需要授权
