@@ -54,7 +54,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 module.exports = {
   solidity: "0.8.4",
-  defaultNetwork: "polygon",
+  defaultNetwork: "hecotest",
   networks: {
     localhost: {
       chainId: 31337,
@@ -107,7 +107,9 @@ module.exports = {
   },
   namedAccounts: {
     deployer: {
-      default: 0, // here this will by default take the first account as deployer
+      default: '0x91fddD20F2A8dF3DFE49bd1107354C912926424e',
+      128: '0x91fddD20F2A8dF3DFE49bd1107354C912926424e',
+      256: '0x91fddD20F2A8dF3DFE49bd1107354C912926424e',
     },
   },
 };

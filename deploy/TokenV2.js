@@ -13,5 +13,6 @@ module.exports = async({getNamedAccounts,deployments,getChainId})=>{
         log:true
     })
 
+
 };
 module.exports.tags = ['TokenV2'];

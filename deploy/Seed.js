@@ -15,4 +15,3 @@ module.exports = async({getNamedAccounts,deployments,getChainId})=>{
 
 };
 module.exports.tags = ['Seed'];
-module.exports.dependencies = ['TokenV2']
