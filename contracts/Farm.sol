@@ -3,137 +3,137 @@ pragma solidity ^0.8.4;
 import "./Seed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./TokenV2.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./CutaverseErc20.sol";
 
 contract Farm is Ownable{
+    using SafeMath for uint256;
 
-    struct Square {
-        Seed fruit;
-        //创建时间
-        uint createdAt;
-        //收获时间，方便于浇水
-        uint harvestAt;
-        // 0表示空闲，1表示成长中
-        uint status;
-        //uint rate;
-    }
-
-
-    struct PlantSeed {
-        Seed fruit;
-        //创建时间
+    struct Land {
+        Seed seed;
+        uint plantTime;
         uint index;
-
-        //uint rate;
     }
 
-    //收获代币
-    TokenV2 harvestToken;
-
-    //土地默认长度
-    uint256 squareLength;
-
-    uint256 farmerCnt;
-
-    mapping(address => uint256) accountSquareLength;
-
-    mapping(address => mapping(uint256 => Square)) accountSquareMapping;
-
-    constructor (TokenV2 _token,uint256 _squareLength) {
-        harvestToken = _token;
-        squareLength = _squareLength;
+    struct Event {
+        Action action;
+        Land[] lands;
     }
 
+    IERC20 harvest;
 
-    //记录土地
-    //mapping(address => Square[]) fields;
+    uint256 public initLandCount;
+    uint256 public maxLandCount;
+    uint256 public farmerCnt;
+    uint256 public createFarmPrice;
+    uint256 public perLandPrice;
 
-    mapping(address => bool) seedValidityMapping;
+    address public _feeTo;
 
-    event BuyFruit(address indexed _address,address fruit,uint256 amount);
+    bool public allowAddLand;
 
-    event plantFruit(address indexed _address,address fruit,uint256 time);
+    mapping(address => uint256) accountLandCount;
+    mapping(address => mapping(uint256 => Land)) accountLandMapping;
 
-    event harvestFruit(address indexed _address,address fruit,uint256 time);
 
-    function createFruit(string memory _name,string memory _symbol,uint256 _harvestAt,uint256 _harvestAmount,uint256 _price) public onlyOwner{
-        Seed fruit = new Seed(_name,_symbol,_harvestAt,_harvestAmount,_price);
-        seedValidityMapping[address(fruit)] = true;
-        //TODO  添加事件
+    enum Action {
+        Plant, Watering, Weeding, Harvest
     }
 
-    function setFruit(address fruit) public onlyOwner {
-        if(seedValidityMapping[fruit]){
-            seedValidityMapping[fruit] = false;
-        }else{
-            seedValidityMapping[fruit] = true;
+    constructor (CutaverseErc20 _harvest, uint256 _maxLandCount, uint256 _perLandPrice) {
+        harvest = _harvest;
+        maxLandCount = _maxLandCount;
+        perLandPrice = _perLandPrice;
+    }
+
+    function addLand(uint256 _count) public payable{
+        require(allowAddLand);
+        require(accountLandCount[msg.sender].add(_count) <= maxLandCount);
+        require(msg.value >= _count.mul(perLandPrice), "The ether value sent is not correct");
+
+        payable(_feeTo).transfer(msg.value);
+
+        accountLandCount[msg.sender] = accountLandCount[msg.sender].add(_count);
+    }
+
+    function createFarm(address _account) public payable{
+        require(accountLandCount[msg.sender] = 0);
+        require(msg.value >= _count.mul(perLandPrice), "The ether value sent is not correct");
+        payable(_feeTo).transfer(msg.value);
+
+        for (uint j=1; j <= initLandCount; j ++) {
+            Land memory empty = Land({
+                seed: Seed(address(0)),
+                plantTime: 0,
+                index: j
+            });
+            accountLandMapping[msg.sender][j] = empty;
         }
-    }
-
-    //初始创建农场
-    function createFarm(address payable _account) public payable{
-        Square memory empty = Square({
-        fruit: Seed(address(0)),
-        createdAt: 0,
-        harvestAt: 0,
-        status: 0
-        });
-
-        for (uint j=1; j <= squareLength; j ++) {
-            accountSquareMapping[msg.sender][j] = empty;
-        }
-        accountSquareLength[msg.sender] = squareLength;
+        accountLandCount[msg.sender] = initLandCount;
         farmerCnt += 1;
     }
 
-    //种植方法
-    function plant(PlantSeed[] memory plantSeed) public {
-        uint256 len = plantSeed.length;
-        require(len > 0 && len <= accountSquareLength[msg.sender],"plant seed is null");
+    function plant(Event memory events) public {
+        Action action = events.action;
+        Land[] lands = events.lands;
+        uint256 len = lands.length;
+        require(len > 0 && len <= accountLandCount[msg.sender],"plant seed is null");
 
-        for(uint i =0 ;i < len;i++){
-            Square memory accountIndexSquare = accountSquareMapping[msg.sender][plantSeed[i].index];
-            accountIndexSquare.fruit = plantSeed[i].fruit;
-            accountIndexSquare.createdAt = block.timestamp;
-            accountIndexSquare.harvestAt = block.timestamp + ISeed(accountIndexSquare.fruit).harvestAt();
-            accountIndexSquare.status = 1;
-            accountIndexSquare.fruit.burn(msg.sender,1);
-            emit plantFruit(msg.sender,address(accountIndexSquare.fruit),block.timestamp);
+        if(action == Action.Plant){
+            plant(lands);
+        }else if(action == Action.Watering){
+            //TODO 减少harvestTime
+        }else if(action == Action.Weeding){
+            //TODO 减少harvestTime
+        }else if(action == Action.Harvest){
+            harvest();
         }
     }
 
-    //收获方法
-    function harvest() public{
-        uint length = accountSquareLength[msg.sender];
+    function plant(Land[] lands) private {
+        for(uint i =0 ;i < lands.length;i++){
+            Land land = lands[i];
+
+            Land storage land = accountLandMapping[msg.sender][land[i].index];
+            require(land.seed == address(0));
+
+            land.seed = land[i].seed;
+            land.plantTime = block.timestamp;
+            land.seed.burn(msg.sender,1);
+        }
+    }
+
+    function watering(Land[] memory land) public{
+        uint256 len = land.length;
+        require(len > 0 && len <= accountLandCount[msg.sender],"plant seed is null");
+
+    }
+
+    function harvest() private{
+        uint length = accountLandCount[msg.sender];
+        require(length >0);
 
         for(uint i = 1;i <= length; i++){
-            Square memory accountSquare = accountSquareMapping[msg.sender][i];
-            if(accountSquare.status == 0){
+            Land storage land = accountLandMapping[msg.sender][i];
+            uint plantTime = land.plantTime;
+            uint harvestTime = land.seed.harvestTime();
+
+            if(block.timestamp < plantTime.add(harvestTime)){
                 continue;
             }
-            require(seedValidityMapping[address(accountSquare.fruit)],"this fruit is invalid");
-            if(accountSquare.harvestAt<=block.timestamp){
-                accountSquare.createdAt = 0;
-                accountSquare.harvestAt = 0;
-                accountSquare.status = 0;
 
-                harvestToken.mint(msg.sender,accountSquare.fruit.harvestAmount());
-                emit harvestFruit(msg.sender,address(accountSquare.fruit),block.timestamp);
-                accountSquareMapping[msg.sender][i] = accountSquare;
-            }
+            land.seed = address(0);
+            land.plantTime = 0;
+
+            harvest.mint(msg.sender,land.seed.yield);
         }
     }
 
-    //购买种子，需要授权
-    function buyFruit(Seed fruit,uint256 amount) public {
-        uint256 tokenAmount = fruit.price()*amount;
-        uint256 balanceSender = harvestToken.balanceOf(msg.sender);
-        require(balanceSender >= tokenAmount,"msg sender balance is not enough");
-        harvestToken.transferFrom(msg.sender, address(this),tokenAmount);
+    function buySeed(Seed seed,uint256 count) public {
+        uint amount = seed.price().mul(count);
+        require(harvest.balanceOf(msg.sender) >= seed.price().mul(count));
+        harvest.transferFrom(msg.sender, _feeTo, amount);
 
-        fruit.mint(msg.sender,amount);
-        emit BuyFruit(msg.sender,address(fruit),amount);
+        seed.mint(msg.sender, count);
     }
-
-
 }
