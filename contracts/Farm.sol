@@ -11,7 +11,7 @@ contract Farm is Ownable{
 
     struct Land {
         Seed seed;
-        uint plantTime;
+        uint harvestTime;
         uint index;
     }
 
@@ -28,13 +28,16 @@ contract Farm is Ownable{
     uint256 public createFarmPrice;
     uint256 public perLandPrice;
 
+    uint256 public wateringRate;
+    uint256 public weedingRate;
+
+
     address public _feeTo;
 
     bool public allowAddLand;
 
     mapping(address => uint256) accountLandCount;
     mapping(address => mapping(uint256 => Land)) accountLandMapping;
-
 
     enum Action {
         Plant, Watering, Weeding, Harvest
@@ -56,15 +59,15 @@ contract Farm is Ownable{
         accountLandCount[msg.sender] = accountLandCount[msg.sender].add(_count);
     }
 
-    function createFarm(address _account) public payable{
+    function createFarm() public payable{
         require(accountLandCount[msg.sender] = 0);
-        require(msg.value >= _count.mul(perLandPrice), "The ether value sent is not correct");
+        require(msg.value >= createFarmPrice, "The ether value sent is not correct");
         payable(_feeTo).transfer(msg.value);
 
-        for (uint j=1; j <= initLandCount; j ++) {
+        for (uint j= 1; j <= initLandCount; j ++) {
             Land memory empty = Land({
                 seed: Seed(address(0)),
-                plantTime: 0,
+                harvestTime: 0,
                 index: j
             });
             accountLandMapping[msg.sender][j] = empty;
@@ -73,7 +76,7 @@ contract Farm is Ownable{
         farmerCnt += 1;
     }
 
-    function plant(Event memory events) public {
+    function operate(Event memory events) public {
         Action action = events.action;
         Land[] lands = events.lands;
         uint256 len = lands.length;
@@ -92,13 +95,15 @@ contract Farm is Ownable{
 
     function plant(Land[] lands) private {
         for(uint i =0 ;i < lands.length;i++){
-            Land land = lands[i];
-
-            Land storage land = accountLandMapping[msg.sender][land[i].index];
             require(land.seed == address(0));
+            Land _land = lands[i];
+            Land storage land = accountLandMapping[msg.sender][_land[i].index];
 
-            land.seed = land[i].seed;
-            land.plantTime = block.timestamp;
+            //TODO 合法种子判断
+            require(_land[i].seed.seed != address(0));
+            land.seed = _land[i].seed;
+
+            land.harvestTime = block.timestamp.add(land.seed.harvestTime);
             land.seed.burn(msg.sender,1);
         }
     }
@@ -107,6 +112,25 @@ contract Farm is Ownable{
         uint256 len = land.length;
         require(len > 0 && len <= accountLandCount[msg.sender],"plant seed is null");
 
+        Land _land = accountLandMapping[msg.sender][land[0].index];
+        Seed seed = _land.seed;
+        _land.harvestTime = _land.harvestTime.mul(1-wateringRate);
+    }
+
+    function weeding(Land[] memory land) public{
+        uint256 len = land.length;
+        require(len > 0 && len <= accountLandCount[msg.sender],"plant seed is null");
+
+        Land _land = accountLandMapping[msg.sender][land[0].index];
+        Seed seed = _land.seed;
+        seed.harvestTime = seed.harvestTime.mul(1-weedingRate);
+    }
+
+    //10,80
+    function steal(address account, Land land) public{
+        //花费价值20%,偷菜80%
+        //20%*10%
+        //概率30%，失败70%，成功，收成归偷菜者，失败花费的90%归菜农，10% 归Feeto
     }
 
     function harvest() private{
@@ -115,15 +139,12 @@ contract Farm is Ownable{
 
         for(uint i = 1;i <= length; i++){
             Land storage land = accountLandMapping[msg.sender][i];
-            uint plantTime = land.plantTime;
-            uint harvestTime = land.seed.harvestTime();
-
-            if(block.timestamp < plantTime.add(harvestTime)){
+            if(block.timestamp < land.harvestTime){
                 continue;
             }
 
             land.seed = address(0);
-            land.plantTime = 0;
+            land.harvestTime = 0;
 
             harvest.mint(msg.sender,land.seed.yield);
         }
@@ -135,5 +156,11 @@ contract Farm is Ownable{
         harvest.transferFrom(msg.sender, _feeTo, amount);
 
         seed.mint(msg.sender, count);
+    }
+
+    function createFruit(string memory _name,string memory _symbol,uint256 _harvestAt,uint256 _harvestAmount,uint256 _price) public onlyOwner{
+        Seed fruit = new Seed(_name,_symbol,_harvestAt,_harvestAmount,_price);
+        seedValidityMapping[address(fruit)] = true;
+        //TODO  添加事件
     }
 }
