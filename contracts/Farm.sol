@@ -163,4 +163,6 @@ contract Farm is Ownable{
         seedValidityMapping[address(fruit)] = true;
         //TODO  添加事件
     }
+
+    //减半周期
 }
