@@ -2,10 +2,14 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "./ISeed.sol";
 
-contract Seed is ISeed,ERC20Burnable,Ownable{
+contract Seed is ERC20Burnable,Ownable{
     address public farm;
+
+    uint256 public price;
+    uint256 public yield;
+    uint256 public matureTime;
+    uint256 public oneDayLimit;
 
     constructor(string memory name,
         string memory symbol,

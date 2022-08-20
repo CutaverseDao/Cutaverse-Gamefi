@@ -7,46 +7,9 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./Seed.sol";
 import "./CutaverseErc20.sol";
+import "./interfaces/IFarm.sol";
 
-contract Farm is Ownable,Pausable{
-    using SafeMath for uint256;
-
-    using EnumerableSet for EnumerableSet.AddressSet;
-    EnumerableSet.AddressSet private seedBank;
-
-    struct Land {
-        Seed seed;
-        uint index;
-        uint gain;
-        uint harvestTime;
-    }
-
-    struct Event {
-        Action action;
-        Land[] lands;
-    }
-
-    IERC20 cutaverse;
-
-    uint256 public maxLandCount;
-    uint256 public farmerCount;
-    uint256 public createFarmPrice;
-    uint256 public wateringPrice;
-    uint256 public landUintPrice;
-
-    uint256 public wateringRate;
-    uint256 public weedingRate;
-
-    address public feeTo;
-
-    bool public allowAddLand;
-
-    mapping(address => uint256) accountLandCount;
-    mapping(address => mapping(uint256 => Land)) accountLandMapping;
-
-    enum Action {
-        Plant, Watering, Weeding, Harvest
-    }
+contract Farm is IFarm,Ownable,Pausable{
 
     constructor (CutaverseErc20 _harvest, uint256 _maxLandCount, uint256 _perLandPrice) {
         harvest = _harvest;
