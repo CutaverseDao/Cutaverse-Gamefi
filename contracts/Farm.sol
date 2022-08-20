@@ -2,19 +2,57 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "./Seed.sol";
-import "./CutaverseErc20.sol";
 import "./interfaces/IFarm.sol";
 
 contract Farm is IFarm,Ownable,Pausable{
 
-    constructor (CutaverseErc20 _harvest, uint256 _maxLandCount, uint256 _perLandPrice) {
-        harvest = _harvest;
-        maxLandCount = _maxLandCount;
-        perLandPrice = _perLandPrice;
+    using SafeMath for uint256;
+
+    using EnumerableSet for EnumerableSet.AddressSet;
+    EnumerableSet.AddressSet private seedBank;
+
+    constructor (Cutaverse _cutaverse,
+        address _feeTo,
+        uint256 _createFarmPrice,
+        uint256 _landUintPrice,
+        uint256 _wateringRate) {
+        cutaverse = _cutaverse;
+        feeTo = _feeTo;
+        createFarmPrice = _createFarmPrice;
+        landUintPrice = _landUintPrice;
+        wateringRate = _wateringRate;
+    }
+
+    function resetFeeTo(address payable _feeTo) external onlyOwner{
+        require(_feeTo != address(0), "_FeeTo is the zero address");
+        address oldFeeTo = feeTo;
+        feeTo = _feeTo;
+
+        emit ResetFeeTo(oldFeeTo, _feeTo);
+    }
+
+    function resetCreateFarmPrice(uint256 _createFarmPrice) external onlyOwner{
+        uint256 oldCreateFarmPrice = createFarmPrice;
+        createFarmPrice = _createFarmPrice;
+
+        emit ResetCreateFarmPrice(oldCreateFarmPrice, _createFarmPrice);
+    }
+
+    function resetLandUintPrice(uint256 _landUintPrice) external onlyOwner{
+        uint256 oldLandUintPrice = landUintPrice;
+        landUintPrice = _landUintPrice;
+
+        emit ResetLandUintPrice(oldLandUintPrice, _landUintPrice);
+    }
+
+    function resetWateringRate(uint256 _wateringRate) external onlyOwner{
+        uint256 oldWateringRate = wateringRate;
+        wateringRate = _wateringRate;
+
+        emit ResetWateringRate(oldWateringRate, _wateringRate);
     }
 
     function addSeed(address seed) public onlyOwner returns (bool) {
@@ -37,12 +75,11 @@ contract Farm is IFarm,Ownable,Pausable{
     }
 
     function createFarm() public payable whenNotPaused{
-        require(accountLandCount[msg.sender] = 0,"You already own a farm");
+        require(accountLandCount[msg.sender] == 0,"You already own a farm");
         require(msg.value >= createFarmPrice, "The ether value sent is not correct");
-        payable(_feeTo).transfer(msg.value);
-        uint defaultLandCount = 4;
+        payable(feeTo).transfer(msg.value);
 
-        for (uint j= 0; j < defaultLandCount; j ++) {
+        for (uint j= 0; j < initialLandCount; j ++) {
             Land memory empty = Land({
                 seed: Seed(address(0)),
                 index: j,
@@ -51,7 +88,7 @@ contract Farm is IFarm,Ownable,Pausable{
             });
             accountLandMapping[msg.sender][j] = empty;
         }
-        accountLandCount[msg.sender] = defaultLandCount;
+        accountLandCount[msg.sender] = initialLandCount;
         farmerCount = farmerCount.add(1);
     }
 
@@ -72,19 +109,20 @@ contract Farm is IFarm,Ownable,Pausable{
 //        }
 //    }
 
-    function buySeed(Seed seed, uint256 count) public whenNotPaused{
-        require(isBankSeed(seed),"An invalid seed");
+    function buySeed(address _seed, uint256 count) public whenNotPaused{
+        require(isBankSeed(_seed),"An invalid seed");
         require(count >0, "Invalid quantity");
 
+        Seed seed = Seed(_seed);
         uint amount = seed.price().mul(count);
-        harvest.transferFrom(msg.sender, feeTo, amount);
+        cutaverse.transferFrom(msg.sender, feeTo, amount);
 
         seed.mint(msg.sender, count);
     }
 
-    function plant(Land[] lands) private whenNotPaused{
+    function plant(Land[] memory lands) private whenNotPaused{
         for(uint i =0 ;i < lands.length;i++){
-            Land _land = lands[i];
+            Land memory _land = lands[i];
             uint index = _land.index;
             Seed seed = _land.seed;
 
@@ -93,9 +131,9 @@ contract Farm is IFarm,Ownable,Pausable{
             require(isBankSeed(seed),"An invalid seed");
 
             land.seed = seed;
-            land.harvestTime = block.timestamp.add(seed.harvestTime);
+            land.harvestTime = block.timestamp.add(seed.matureTime);
             land.gain = land.seed.yield;
-            land.seed.burn(msg.sender,1);
+            land.seed.burn(1*10**land.seed.decimals());
         }
     }
 
@@ -104,17 +142,17 @@ contract Farm is IFarm,Ownable,Pausable{
         require(len >= 0, "The lands count sent is not correct");
         require(msg.value >= wateringPrice.mul(len), "The ether value sent is not correct");
 
-        payable(_feeTo).transfer(msg.value);
+        payable(feeTo).transfer(msg.value);
 
         for(uint i =0 ;i < lands.length;i++){
-            Land _land = lands[i];
+            Land memory _land = lands[i];
             uint index = _land.index;
 
             Land storage land = accountLandMapping[msg.sender][index];
 
             uint256 finalHarvestTime = land.harvestTime.mul(SafeMath.sub(1,wateringRate));
 
-            require(land.seed != address(0) && finalHarvestTime > block.timestamp,"");
+            require(address(land.seed) != address(0) && finalHarvestTime > block.timestamp,"");
             land.harvestTime = finalHarvestTime;
         }
     }
@@ -125,11 +163,11 @@ contract Farm is IFarm,Ownable,Pausable{
 
         for(uint i = 0;i < length; i++){
             Land storage land = accountLandMapping[msg.sender][i];
-            if(land.seed != address(0) && block.timestamp < land.harvestTime){
+            if(address(land.seed) != address(0) && block.timestamp < land.harvestTime){
                 continue;
             }
 
-            land.seed = address(0);
+            land.seed = Seed(address(0));
             land.gain = 0;
             land.harvestTime = 0;
 

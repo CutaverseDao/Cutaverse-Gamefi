@@ -52,29 +52,6 @@ const prompt = require('prompt-sync')();
   }
 })();
 
-let accounts = [];
-(async function(){
-  try {
-    const file = '.secret';
-    var info = fs.statSync(file);
-    if (!info.isDirectory()) {
-      const content = fs.readFileSync(file, 'utf8');
-      let lines = content.split('\n');
-      for (let index = 0; index < lines.length; index ++) {
-        let line = lines[index];
-        if (line == undefined || line == '') {
-          continue;
-        }
-        if (!line.startsWith('0x') || !line.startsWith('0x')) {
-          line = '0x' + line;
-        }
-        accounts.push(line);
-      }
-    }
-  } catch (ex) {
-  }
-})()
-
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 

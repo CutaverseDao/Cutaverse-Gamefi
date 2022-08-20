@@ -29,6 +29,11 @@ contract Seed is ERC20Burnable,Ownable{
         _;
     }
 
+    function restFarm(address _farm) public onlyOwner{
+        require(_farm != address(0),"_farm is the zero address");
+        farm = _farm;
+    }
+
     function mint(address account, uint256 amount) public onlyMinter {
         _mint(account, amount);
     }

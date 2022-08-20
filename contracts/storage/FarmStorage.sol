@@ -1,10 +1,9 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.8.4;
+
+import "../Cutaverse.sol";
+import "../Seed.sol";
 
 contract FarmStorage {
-    using SafeMath for uint256;
-
-    using EnumerableSet for EnumerableSet.AddressSet;
-    EnumerableSet.AddressSet private seedBank;
 
     struct Land {
         Seed seed;
@@ -22,20 +21,21 @@ contract FarmStorage {
         Plant, Watering, Weeding, Harvest
     }
 
-    IERC20 cutaverse;
+    uint256 public constant initialLandCount = 4;
+    uint256 public constant maxLandCount = 16;
 
-    uint256 public maxLandCount;
-    uint256 public farmerCount;
+    Cutaverse cutaverse;
+    address public feeTo;
+
     uint256 public createFarmPrice;
     uint256 public wateringPrice;
     uint256 public landUintPrice;
 
     uint256 public wateringRate;
-    uint256 public weedingRate;
-
-    address public feeTo;
-
+//    uint256 public weedingRate;
     bool public allowAddLand;
+
+    uint256 public farmerCount;
 
     mapping(address => uint256) accountLandCount;
     mapping(address => mapping(uint256 => Land)) accountLandMapping;
