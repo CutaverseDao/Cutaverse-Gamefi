@@ -9,10 +9,10 @@ contract Seed is ERC20Burnable,ISeed,Ownable{
     constructor(string memory name,
         string memory symbol,
         uint256 _yield,
-        uint256 _harvestTime,
+        uint256 _matureTime,
         uint256 _price) ERC20(name, symbol){
         yield = _yield;
-        harvestTime = _harvestTime;
+        matureTime = _matureTime;
         price = _price;
     }
 }
