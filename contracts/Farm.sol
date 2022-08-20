@@ -1,11 +1,11 @@
 pragma solidity ^0.8.4;
 
-import "./Seed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./Seed.sol";
 import "./CutaverseErc20.sol";
 
 contract Farm is Ownable,Pausable{
@@ -31,7 +31,8 @@ contract Farm is Ownable,Pausable{
     uint256 public maxLandCount;
     uint256 public farmerCount;
     uint256 public createFarmPrice;
-    uint256 public perLandPrice;
+    uint256 public wateringPrice;
+    uint256 public landUintPrice;
 
     uint256 public wateringRate;
     uint256 public weedingRate;
@@ -72,8 +73,6 @@ contract Farm is Ownable,Pausable{
         return EnumerableSet.at(seedBank, pid);
     }
 
-
-
     function createFarm() public payable whenNotPaused{
         require(accountLandCount[msg.sender] = 0,"You already own a farm");
         require(msg.value >= createFarmPrice, "The ether value sent is not correct");
@@ -93,24 +92,24 @@ contract Farm is Ownable,Pausable{
         farmerCount = farmerCount.add(1);
     }
 
-    function operate(Event memory events) public {
-        Action action = events.action;
-        Land[] lands = events.lands;
-        uint256 len = land.length;
-        require(len > 0 && len <= accountLandCount[msg.sender],"The number of land assets is wrong");
+//    function operate(Event memory events) public {
+//        Action action = events.action;
+//        Land[] lands = events.lands;
+//        uint256 len = land.length;
+//        require(len > 0 && len <= accountLandCount[msg.sender],"The number of land assets is wrong");
+//
+//        if(action == Action.Plant){
+//            plant(lands);
+//        }else if(action == Action.Watering){
+//            //TODO 减少harvestTime
+//        }else if(action == Action.Weeding){
+//            //TODO 减少harvestTime
+//        }else if(action == Action.Harvest){
+//            harvest();
+//        }
+//    }
 
-        if(action == Action.Plant){
-            plant(lands);
-        }else if(action == Action.Watering){
-            //TODO 减少harvestTime
-        }else if(action == Action.Weeding){
-            //TODO 减少harvestTime
-        }else if(action == Action.Harvest){
-            harvest();
-        }
-    }
-
-    function buySeed(Seed seed, uint256 count) public {
+    function buySeed(Seed seed, uint256 count) public whenNotPaused{
         require(isBankSeed(seed),"An invalid seed");
         require(count >0, "Invalid quantity");
 
@@ -137,18 +136,27 @@ contract Farm is Ownable,Pausable{
         }
     }
 
-    function watering(Land[] memory land) public{
+    function watering(Land[] memory lands) public payable whenNotPaused{
+        uint256 len = lands.length;
+        require(len >= 0, "The lands count sent is not correct");
+        require(msg.value >= wateringPrice.mul(len), "The ether value sent is not correct");
+
+        payable(_feeTo).transfer(msg.value);
+
         for(uint i =0 ;i < lands.length;i++){
             Land _land = lands[i];
             uint index = _land.index;
 
             Land storage land = accountLandMapping[msg.sender][index];
-            require(land.seed == address(0) && land.harvestTime.add(1-wateringRate) < block.timestamp,"");
-            land.harvestTime = land.harvestTime.add(1-wateringRate);
+
+            uint256 finalHarvestTime = land.harvestTime.mul(SafeMath.sub(1,wateringRate));
+
+            require(land.seed != address(0) && finalHarvestTime > block.timestamp,"");
+            land.harvestTime = finalHarvestTime;
         }
     }
 
-    function harvest() private{
+    function harvest() public{
         uint length = accountLandCount[msg.sender];
         require(length >0 ,"You don't have your own farm yet");
 
