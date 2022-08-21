@@ -30,23 +30,23 @@ contract Seed is ERC20Burnable,ISeed,Ownable{
         _;
     }
 
-    function farm() external view virtual override returns (address) {
+    function farm() external view override returns (address) {
         return _farm;
     }
 
-    function price() external view virtual override returns (uint256) {
+    function price() external view override returns (uint256) {
         return _price;
     }
 
-    function yield() external view virtual override returns (uint256) {
+    function yield() external view override returns (uint256) {
         return _yield;
     }
 
-    function matureTime() external view virtual override returns (uint256) {
+    function matureTime() external view override returns (uint256) {
         return _matureTime;
     }
 
-    function oneDayLimit() external view virtual override returns (uint256) {
+    function oneDayLimit() external view override returns (uint256) {
         return _oneDayLimit;
     }
 
