@@ -1,15 +1,15 @@
 pragma solidity ^0.8.4;
 
 import "../Cutaverse.sol";
-import "../Seed.sol";
+import "../interfaces/ISeed.sol";
 
 contract FarmStorage {
 
     struct Land {
-        Seed seed;
-        uint index;
-        uint gain;
-        uint harvestTime;
+        ISeed seed;
+        uint256 index;
+        uint256 gain;
+        uint256 harvestTime;
     }
 
     struct Event {
@@ -37,6 +37,7 @@ contract FarmStorage {
 
     uint256 public farmerCount;
 
+    mapping(uint256 => address) pidAccountMapping;//todo
     mapping(address => uint256) accountLandCount;
     mapping(address => mapping(uint256 => Land)) accountLandMapping;
 }

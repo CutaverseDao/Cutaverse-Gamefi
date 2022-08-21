@@ -3,11 +3,12 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/IFarm.sol";
 
-contract Farm is IFarm,Ownable,Pausable{
+contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
 
     using SafeMath for uint256;
 
@@ -55,12 +56,6 @@ contract Farm is IFarm,Ownable,Pausable{
         emit ResetWateringRate(oldWateringRate, _wateringRate);
     }
 
-    function addSeed(address seed) public onlyOwner returns (bool) {
-        require(seed != address(0), "Seed is the zero address");
-        require(!isBankSeed(seed),"The seed is already there");
-        return EnumerableSet.add(seedBank, seed);
-    }
-
     function isBankSeed(address seed) public view returns (bool) {
         return EnumerableSet.contains(seedBank, seed);
     }
@@ -74,14 +69,24 @@ contract Farm is IFarm,Ownable,Pausable{
         return EnumerableSet.at(seedBank, pid);
     }
 
-    function createFarm() public payable whenNotPaused{
+    function addSeed(address seed) public onlyOwner returns (bool) {
+        require(seed != address(0), "Seed is the zero address");
+        require(!isBankSeed(seed),"The seed is already there");
+        return EnumerableSet.add(seedBank, seed);
+    }
+
+    function allBankSeed() public view returns(address[] memory){
+        return EnumerableSet.values(seedBank);
+    }
+
+    function createFarm() public payable nonReentrant whenNotPaused{
         require(accountLandCount[msg.sender] == 0,"You already own a farm");
         require(msg.value >= createFarmPrice, "The ether value sent is not correct");
         payable(feeTo).transfer(msg.value);
 
         for (uint j= 0; j < initialLandCount; j ++) {
             Land memory empty = Land({
-                seed: Seed(address(0)),
+                seed: ISeed(address(0)),
                 index: j,
                 gain: 0,
                 harvestTime: 0
@@ -90,6 +95,7 @@ contract Farm is IFarm,Ownable,Pausable{
         }
         accountLandCount[msg.sender] = initialLandCount;
         farmerCount = farmerCount.add(1);
+        pidAccountMapping[farmerCount] = msg.sender;
     }
 
 //    function operate(Event memory events) public {
@@ -109,37 +115,42 @@ contract Farm is IFarm,Ownable,Pausable{
 //        }
 //    }
 
-    function buySeed(address _seed, uint256 count) public whenNotPaused{
+    function buySeed(address _seed, uint256 count) public nonReentrant whenNotPaused{
         require(isBankSeed(_seed),"An invalid seed");
         require(count >0, "Invalid quantity");
 
-        Seed seed = Seed(_seed);
+        ISeed seed = ISeed(_seed);
         uint amount = seed.price().mul(count);
         cutaverse.transferFrom(msg.sender, feeTo, amount);
 
         seed.mint(msg.sender, count);
+        //限售TODO
     }
 
-    function plant(Land[] memory lands) private whenNotPaused{
+    function plant(Land[] memory lands) public nonReentrant whenNotPaused{
+        uint256 len = lands.length;
+        require(len > 0 && len <= accountLandCount[msg.sender], "The lands count sent is not correct");
+
         for(uint i =0 ;i < lands.length;i++){
             Land memory _land = lands[i];
             uint index = _land.index;
-            Seed seed = _land.seed;
+            ISeed seed = _land.seed;
+
+            require(isBankSeed(address(seed)),"An invalid seed");
 
             Land storage land = accountLandMapping[msg.sender][index];
-            require(land.seed == address(0),"The land is already planted");
-            require(isBankSeed(seed),"An invalid seed");
+            require(address(land.seed) == address(0),"The land is already planted");
 
             land.seed = seed;
-            land.harvestTime = block.timestamp.add(seed.matureTime);
-            land.gain = land.seed.yield;
-            land.seed.burn(1*10**land.seed.decimals());
+            land.harvestTime = seed.matureTime().add(block.timestamp);
+            land.gain = seed.yield();
+            land.seed.burn(1*10**seed.decimals());
         }
     }
 
-    function watering(Land[] memory lands) public payable whenNotPaused{
+    function watering(Land[] memory lands) public payable nonReentrant whenNotPaused{
         uint256 len = lands.length;
-        require(len >= 0, "The lands count sent is not correct");
+        require(len > 0 && len <= accountLandCount[msg.sender], "The lands count sent is not correct");
         require(msg.value >= wateringPrice.mul(len), "The ether value sent is not correct");
 
         payable(feeTo).transfer(msg.value);
@@ -150,14 +161,14 @@ contract Farm is IFarm,Ownable,Pausable{
 
             Land storage land = accountLandMapping[msg.sender][index];
 
-            uint256 finalHarvestTime = land.harvestTime.mul(SafeMath.sub(1,wateringRate));
+            uint256 finalHarvestTime = land.harvestTime.mul(SafeMath.sub(1,wateringRate));//TODO
 
-            require(address(land.seed) != address(0) && finalHarvestTime > block.timestamp,"");
-            land.harvestTime = finalHarvestTime;
+            require(address(land.seed) != address(0),"");
+            land.harvestTime = finalHarvestTime > block.timestamp ? finalHarvestTime : block.timestamp;
         }
     }
 
-    function harvest() public{
+    function harvest() public nonReentrant{
         uint length = accountLandCount[msg.sender];
         require(length >0 ,"You don't have your own farm yet");
 
@@ -167,11 +178,11 @@ contract Farm is IFarm,Ownable,Pausable{
                 continue;
             }
 
-            land.seed = Seed(address(0));
+            cutaverse.mint(msg.sender,land.gain);
+
+            land.seed = ISeed(address(0));
             land.gain = 0;
             land.harvestTime = 0;
-
-            cutaverse.mint(msg.sender,land.gain);
         }
     }
 
