@@ -1,15 +1,15 @@
 pragma solidity ^0.8.4;
 
 import "../Cutaverse.sol";
-import "../Seed.sol";
+import "../interfaces/ISeed.sol";
 
 contract FarmStorage {
 
     struct Land {
-        Seed seed;
-        uint index;
-        uint gain;
-        uint harvestTime;
+        ISeed seed;
+        uint256 index;
+        uint256 gain;
+        uint256 harvestTime;
     }
 
     struct Event {

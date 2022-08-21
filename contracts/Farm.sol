@@ -81,7 +81,7 @@ contract Farm is IFarm,Ownable,Pausable{
 
         for (uint j= 0; j < initialLandCount; j ++) {
             Land memory empty = Land({
-                seed: Seed(address(0)),
+                seed: ISeed(address(0)),
                 index: j,
                 gain: 0,
                 harvestTime: 0
@@ -113,7 +113,7 @@ contract Farm is IFarm,Ownable,Pausable{
         require(isBankSeed(_seed),"An invalid seed");
         require(count >0, "Invalid quantity");
 
-        Seed seed = Seed(_seed);
+        ISeed seed = ISeed(_seed);
         uint amount = seed.price().mul(count);
         cutaverse.transferFrom(msg.sender, feeTo, amount);
 
@@ -124,16 +124,20 @@ contract Farm is IFarm,Ownable,Pausable{
         for(uint i =0 ;i < lands.length;i++){
             Land memory _land = lands[i];
             uint index = _land.index;
-            Seed seed = _land.seed;
+            ISeed seed = _land.seed;
 
             Land storage land = accountLandMapping[msg.sender][index];
-            require(land.seed == address(0),"The land is already planted");
-            require(isBankSeed(seed),"An invalid seed");
+            require(address(land.seed) == address(0),"The land is already planted");
+            require(isBankSeed(address(seed)),"An invalid seed");
+
+            uint256 harvestTime = seed.matureTime();
+            uint256 gain = seed.yield();
+            uint256 seedDecimals = seed.decimals();
 
             land.seed = seed;
-            land.harvestTime = block.timestamp.add(seed.matureTime);
-            land.gain = land.seed.yield;
-            land.seed.burn(1*10**land.seed.decimals());
+            land.harvestTime = harvestTime;
+            land.gain = gain;
+            land.seed.burn(1*10**seedDecimals);
         }
     }
 
@@ -167,7 +171,7 @@ contract Farm is IFarm,Ownable,Pausable{
                 continue;
             }
 
-            land.seed = Seed(address(0));
+            land.seed = ISeed(address(0));
             land.gain = 0;
             land.harvestTime = 0;
 

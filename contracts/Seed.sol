@@ -1,40 +1,61 @@
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "./interfaces/ISeed.sol";
 
-contract Seed is ERC20Burnable,Ownable{
-    address public farm;
+contract Seed is ERC20Burnable,ISeed,Ownable{
+    address private _farm;
 
-    uint256 public price;
-    uint256 public yield;
-    uint256 public matureTime;
-    uint256 public oneDayLimit;
+    uint256 private _price;
+    uint256 private _yield;
+    uint256 private _matureTime;
+    uint256 private _oneDayLimit;
 
     constructor(string memory name,
         string memory symbol,
-        uint256 _price,
-        uint256 _yield,
-        uint256 _matureTime,
-        uint256 _oneDayLimit) ERC20(name, symbol){
-        price = _price;
-        yield = _yield;
-        matureTime = _matureTime;
-        oneDayLimit = _oneDayLimit;
+        uint256 price,
+        uint256 yield,
+        uint256 matureTime,
+        uint256 oneDayLimit) ERC20(name, symbol){
+        _price = price;
+        _yield = yield;
+        _matureTime = matureTime;
+        _oneDayLimit = oneDayLimit;
     }
 
     modifier onlyMinter() {
         require(owner() == _msgSender()
-            || (farm != address(0) && farm == _msgSender()), "Ownable: caller is not the minter");
+            || (_farm != address(0) && _farm == _msgSender()), "Ownable: caller is not the minter");
         _;
     }
 
-    function restFarm(address _farm) public onlyOwner{
-        require(_farm != address(0),"_farm is the zero address");
-        farm = _farm;
+    function farm() external view virtual override returns (address) {
+        return _farm;
     }
 
-    function mint(address account, uint256 amount) public onlyMinter {
+    function price() external view virtual override returns (uint256) {
+        return _price;
+    }
+
+    function yield() external view virtual override returns (uint256) {
+        return _yield;
+    }
+
+    function matureTime() external view virtual override returns (uint256) {
+        return _matureTime;
+    }
+
+    function oneDayLimit() external view virtual override returns (uint256) {
+        return _oneDayLimit;
+    }
+
+    function restFarm(address farm) public override onlyOwner{
+        require(farm != address(0),"_farm is the zero address");
+        _farm = farm;
+    }
+
+    function mint(address account, uint256 amount) public override onlyMinter {
         _mint(account, amount);
     }
 }
