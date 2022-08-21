@@ -38,6 +38,11 @@ contract Farm is Ownable{
 
     mapping(address => uint256) accountLandCount;
     mapping(address => mapping(uint256 => Land)) accountLandMapping;
+    mapping(address => bool) seedValidityMapping;
+
+    event CreatedFarm(address indexed user, uint256 indexed blockTime);
+    event CreatedFruit(address indexed fruit, uint256 indexed blockTime);
+    event ExpansionLand(address indexed user, uint256 indexed count);
 
     enum Action {
         Plant, Watering, Weeding, Harvest
@@ -49,6 +54,12 @@ contract Farm is Ownable{
         perLandPrice = _perLandPrice;
     }
 
+    function createFruit(string memory _name,string memory _symbol,uint256 _harvestTime,uint256 _yield,uint256 _price) public onlyOwner{
+        Seed fruit = new Seed(_name,_symbol,_harvestTime,_yield,_price);
+        seedValidityMapping[address(fruit)] = true;
+        emit CreatedFruit(address(fruit),block.timestamp);
+    }
+
     function addLand(uint256 _count) public payable{
         require(allowAddLand);
         require(accountLandCount[msg.sender].add(_count) <= maxLandCount);
@@ -57,6 +68,7 @@ contract Farm is Ownable{
         payable(_feeTo).transfer(msg.value);
 
         accountLandCount[msg.sender] = accountLandCount[msg.sender].add(_count);
+        emit ExpansionLand(msg.sender,_count);
     }
 
     function createFarm() public payable{
@@ -74,6 +86,8 @@ contract Farm is Ownable{
         }
         accountLandCount[msg.sender] = initLandCount;
         farmerCnt += 1;
+
+        emit CreatedFarm(msg.sender,block.timestamp);
     }
 
     function operate(Event memory events) public {
@@ -153,16 +167,13 @@ contract Farm is Ownable{
     function buySeed(Seed seed,uint256 count) public {
         uint amount = seed.price().mul(count);
         require(harvest.balanceOf(msg.sender) >= seed.price().mul(count));
+
+
         harvest.transferFrom(msg.sender, _feeTo, amount);
 
         seed.mint(msg.sender, count);
     }
 
-    function createFruit(string memory _name,string memory _symbol,uint256 _harvestAt,uint256 _harvestAmount,uint256 _price) public onlyOwner{
-        Seed fruit = new Seed(_name,_symbol,_harvestAt,_harvestAmount,_price);
-        seedValidityMapping[address(fruit)] = true;
-        //TODO  添加事件
-    }
 
     //减半周期
 }
