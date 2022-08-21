@@ -58,4 +58,12 @@ contract Seed is ERC20Burnable,ISeed,Ownable{
     function mint(address account, uint256 amount) public override onlyMinter {
         _mint(account, amount);
     }
+
+    function burn(uint256 amount) public override (ERC20Burnable,ISeed){
+        super.burn(amount);
+    }
+
+    function burnFrom(address account, uint256 amount) public override (ERC20Burnable,ISeed){
+        super.burnFrom(account,amount);
+    }
 }
