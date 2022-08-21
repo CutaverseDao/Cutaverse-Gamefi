@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
@@ -57,5 +57,13 @@ contract Seed is ERC20Burnable,ISeed,Ownable{
 
     function mint(address account, uint256 amount) public override onlyMinter {
         _mint(account, amount);
+    }
+
+    function burn(uint256 amount) public override (ERC20Burnable,ISeed){
+        super.burn(amount);
+    }
+
+    function burnFrom(address account, uint256 amount) public override (ERC20Burnable,ISeed){
+        super.burnFrom(account,amount);
     }
 }
