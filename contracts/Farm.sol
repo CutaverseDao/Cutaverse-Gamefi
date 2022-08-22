@@ -15,7 +15,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
     using EnumerableSet for EnumerableSet.AddressSet;
     EnumerableSet.AddressSet private seedBank;
 
-    constructor (Cutaverse _cutaverse,
+    constructor (ICutaverse _cutaverse,
         address _feeTo,
         uint256 _createFarmPrice,
         uint256 _landUintPrice,

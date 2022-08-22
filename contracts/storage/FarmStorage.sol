@@ -1,6 +1,6 @@
 pragma solidity ^0.8.4;
 
-import "../Cutaverse.sol";
+import "../interfaces/ICutaverse.sol";
 import "../interfaces/ISeed.sol";
 
 contract FarmStorage {
@@ -24,7 +24,7 @@ contract FarmStorage {
     uint256 public constant initialLandCount = 4;
     uint256 public constant maxLandCount = 16;
 
-    Cutaverse cutaverse;
+    ICutaverse cutaverse;
     address public feeTo;
 
     uint256 public createFarmPrice;
