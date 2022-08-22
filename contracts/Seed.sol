@@ -1,10 +1,10 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/ISeed.sol";
 
-contract Seed is ERC20Burnable,ISeed,Ownable{
+contract Seed is ERC20,ISeed,Ownable{
     address private _farm;
 
     uint256 private _price;
@@ -56,14 +56,11 @@ contract Seed is ERC20Burnable,ISeed,Ownable{
     }
 
     function mint(address account, uint256 amount) public override onlyMinter {
-        _mint(account, amount);
+        super._mint(account, amount);
     }
 
-    function burn(uint256 amount) public override (ERC20Burnable,ISeed){
-        super.burn(amount);
+    function burn(uint256 amount) public override onlyMinter{
+        super._burn(msg.sender,amount);
     }
 
-    function burnFrom(address account, uint256 amount) public override (ERC20Burnable,ISeed){
-        super.burnFrom(account,amount);
-    }
 }

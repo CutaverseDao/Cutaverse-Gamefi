@@ -9,7 +9,7 @@ module.exports = async({getNamedAccounts,deployments,getChainId})=>{
 
     await deploy("Seed",{
         from:deployer,
-        args:["hlb","HLB",3600,200,100],
+        args:["hlb","HLB",3600,200,100,24*3600],
         log:true
     })
 
