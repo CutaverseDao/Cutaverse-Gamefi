@@ -9,7 +9,7 @@ contract Cutaverse is ERC20,ICutaverse,Ownable{
     address private _farm;
     uint256 private immutable _cap;
 
-    constructor(uint256 cap_) ERC20("Cutaverse", "CTV") {
+    constructor(uint256 cap_, string memory name, string memory symbol) ERC20(name, symbol) {
         require(cap_ > 0, "ERC20Capped: cap is 0");
         _cap = cap_;
     }

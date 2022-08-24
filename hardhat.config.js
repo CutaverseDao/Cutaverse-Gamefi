@@ -102,18 +102,24 @@ module.exports = {
       gasPrice: 2 * 1000000000,
       chainId: 256,
     },
+    rinkeby: {
+      url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      accounts: accounts,
+      gasPrice: 5 * 1000000000,
+      chainId: 4,
+    },
     ropsten:{
       url:"https://ropsten.infura.io/v3/",
       chainId:3,
       accounts:accounts
     },
-    hardhat:{
-      accounts:accounts.map(privateKey=>({privateKey,balance:toWei("100").toString()}))
-    }
+    // hardhat:{
+    //   accounts:accounts.map(privateKey=>({privateKey,balance:toWei("100").toString()}))
+    // }
   },
   namedAccounts: {
     deployer: {
-      default: '0x91fddD20F2A8dF3DFE49bd1107354C912926424e',
+      default: '0xdd765bD518F247703771BCda4B56cdE2DCa6B185',
       128: '0x91fddD20F2A8dF3DFE49bd1107354C912926424e',
       256: '0x91fddD20F2A8dF3DFE49bd1107354C912926424e',
     },

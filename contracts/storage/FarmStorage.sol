@@ -37,7 +37,7 @@ contract FarmStorage {
 
     uint256 public farmerCount;
 
-    mapping(uint256 => address) pidAccountMapping;//todo
-    mapping(address => uint256) accountLandCount;
-    mapping(address => mapping(uint256 => Land)) accountLandMapping;
+    mapping(uint256 => address) public pidAccountMapping;//todo
+    mapping(address => uint256) public accountLandCount;
+    mapping(address => mapping(uint256 => Land)) public accountLandMapping;
 }
