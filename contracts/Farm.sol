@@ -20,6 +20,9 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
         uint256 _createFarmPrice,
         uint256 _landUintPrice,
         uint256 _wateringRate) {
+        require(address(_cutaverse) != address(0),"_cutaverse is the zero address");
+        require(_feeTo != address(0),"_feeTo is the zero address");
+
         cutaverse = _cutaverse;
         feeTo = _feeTo;
         createFarmPrice = _createFarmPrice;
@@ -120,7 +123,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
         require(count >0, "Invalid quantity");
 
         ISeed seed = ISeed(_seed);
-        uint amount = seed.price().mul(count);
+        uint amount = seed.price().mul(count.div(10**seed.decimals()));
         cutaverse.transferFrom(msg.sender, feeTo, amount);
 
         seed.mint(msg.sender, count);

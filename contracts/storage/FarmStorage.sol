@@ -24,7 +24,7 @@ contract FarmStorage {
     uint256 public constant initialLandCount = 4;
     uint256 public constant maxLandCount = 16;
 
-    ICutaverse cutaverse;
+    ICutaverse public cutaverse;
     address public feeTo;
 
     uint256 public createFarmPrice;
