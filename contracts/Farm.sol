@@ -164,7 +164,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
 
             Land storage land = accountLandMapping[msg.sender][index];
 
-            uint256 finalHarvestTime = land.harvestTime.mul(SafeMath.sub(1,wateringRate));//TODO
+            uint256 finalHarvestTime = land.harvestTime.mul( 1000 - wateringRate)).div(1000);//TODO
 
             require(address(land.seed) != address(0),"");
             land.harvestTime = finalHarvestTime > block.timestamp ? finalHarvestTime : block.timestamp;

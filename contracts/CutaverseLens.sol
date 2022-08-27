@@ -13,6 +13,7 @@ contract CutaverseLens {
         bool allowAddLand;
     }
 
+    // 获取基础信息
     function getBasicInfo(Farm farm) public view returns(BasicMetadata memory){
         return BasicMetadata({
             farmerCount: farm.farmerCount(),
