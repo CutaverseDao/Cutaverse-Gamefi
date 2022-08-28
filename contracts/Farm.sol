@@ -12,8 +12,6 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
 
     using SafeMath for uint256;
 
-    using EnumerableSet for EnumerableSet.AddressSet;
-    EnumerableSet.AddressSet private seedBank;
 
     constructor (ICutaverse _cutaverse,
         address _feeTo,
@@ -27,6 +25,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
         feeTo = _feeTo;
         createFarmPrice = _createFarmPrice;
         landUintPrice = _landUintPrice;
+        require(wateringRate < 500 && wateringRate > 0, "wateringRate is invalid");
         wateringRate = _wateringRate;
     }
 
@@ -59,28 +58,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
         emit ResetWateringRate(oldWateringRate, _wateringRate);
     }
 
-    function isBankSeed(address seed) public view returns (bool) {
-        return EnumerableSet.contains(seedBank, seed);
-    }
 
-    function getBankSeedCount() public view returns (uint256) {
-        return EnumerableSet.length(seedBank);
-    }
-
-    function getBankSeedAddress(uint256 pid) public view returns (address){
-        require(pid <= getBankSeedCount() - 1, "Not find this seed");
-        return EnumerableSet.at(seedBank, pid);
-    }
-
-    function addSeed(address seed) public onlyOwner returns (bool) {
-        require(seed != address(0), "Seed is the zero address");
-        require(!isBankSeed(seed),"The seed is already there");
-        return EnumerableSet.add(seedBank, seed);
-    }
-
-    function allBankSeed() public view returns(address[] memory){
-        return EnumerableSet.values(seedBank);
-    }
 
     function createFarm() public payable nonReentrant whenNotPaused{
         require(accountLandCount[msg.sender] == 0,"You already own a farm");
@@ -99,6 +77,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
         accountLandCount[msg.sender] = initialLandCount;
         farmerCount = farmerCount.add(1);
         pidAccountMapping[farmerCount] = msg.sender;
+        emit CreateFarm(msg.sender);
     }
 
 //    function operate(Event memory events) public {
@@ -118,17 +97,6 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
 //        }
 //    }
 
-    function buySeed(address _seed, uint256 count) public nonReentrant whenNotPaused{
-        require(isBankSeed(_seed),"An invalid seed");
-        require(count >0, "Invalid quantity");
-
-        ISeed seed = ISeed(_seed);
-        uint amount = seed.price().mul(count.div(10**seed.decimals()));
-        cutaverse.transferFrom(msg.sender, feeTo, amount);
-
-        seed.mint(msg.sender, count);
-        //限售TODO
-    }
 
     function plant(Land[] memory lands) public nonReentrant whenNotPaused{
         uint256 len = lands.length;
@@ -148,6 +116,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
             land.harvestTime = seed.matureTime().add(block.timestamp);
             land.gain = seed.yield();
             land.seed.burn(1*10**seed.decimals());
+            emit Planting(msg.sender,address(land.seed),index);
         }
     }
 
@@ -164,10 +133,11 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
 
             Land storage land = accountLandMapping[msg.sender][index];
 
-            uint256 finalHarvestTime = land.harvestTime.mul( 1000 - wateringRate)).div(1000);//TODO
+            uint256 finalHarvestTime = land.harvestTime.mul(1000 - wateringRate).div(1000);//TODO
 
-            require(address(land.seed) != address(0),"");
+            require(address(land.seed) != address(0),"water seed address is invalid");
             land.harvestTime = finalHarvestTime > block.timestamp ? finalHarvestTime : block.timestamp;
+            emit Watering(msg.sender,address(land.seed),index);
         }
     }
 
@@ -182,6 +152,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
             }
 
             cutaverse.mint(msg.sender,land.gain);
+            emit Harvesting(msg.sender,address(land.seed),land.index);
 
             land.seed = ISeed(address(0));
             land.gain = 0;
