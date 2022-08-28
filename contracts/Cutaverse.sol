@@ -2,17 +2,13 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "./interfaces/ICutaverse.sol";
 
-contract Cutaverse is ERC20,ICutaverse,Ownable{
+contract Cutaverse is ICutaverse,ERC20Capped,Ownable{
     address private _farm;
-    uint256 private immutable _cap;
 
-    constructor(uint256 cap_, string memory name, string memory symbol) ERC20(name, symbol) {
-        require(cap_ > 0, "ERC20Capped: cap is 0");
-        _cap = cap_;
-    }
+    constructor(uint256 cap, string memory name, string memory symbol) ERC20Capped(cap) ERC20(name, symbol) {}
 
     modifier onlyMinter() {
         require(owner() == _msgSender()
@@ -24,17 +20,16 @@ contract Cutaverse is ERC20,ICutaverse,Ownable{
         return _farm;
     }
 
-    function cap() public view override returns (uint256) {
-        return _cap;
+    function cap() public view override(ICutaverse,ERC20Capped) returns (uint256){
+        return super.cap();
     }
 
     function restFarm(address farm) public override onlyOwner{
-        require(farm != address(0),"_farm is the zero address");
+        require(farm != address(0),"farm is the zero address");
         _farm = farm;
     }
 
     function mint(address account, uint256 amount) public override onlyMinter {
-        require(ERC20.totalSupply() + amount <= cap(), "ERC20Capped: cap exceeded");
-        super._mint(account, amount);
+        _mint(account, amount);
     }
 }
