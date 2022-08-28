@@ -3,16 +3,14 @@ module.exports = async ({ ethers, getNamedAccounts, deployments, getChainId, get
     const { deployer} = await ethers.getNamedSigners();
     const deployerAddress = deployer.address;
 
-    const price = ethers.utils.parseUnits("0.01", 18);
     const yield = ethers.utils.parseUnits("100", 18);
     const matureTime = 1*24*60*60;
-    const oneDayLimit = 1000;
 
     await deploy("Seed", {
         from: deployerAddress,
         contract: "Seed",
         log: true,
-        args:["Maize","MZ",price,yield,matureTime,oneDayLimit],
+        args:["Maize","MZ",0, yield,matureTime],
         deterministicDeployment: false
     });
 

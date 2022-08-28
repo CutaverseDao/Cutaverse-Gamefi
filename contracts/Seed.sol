@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "./interfaces/ISeed.sol";
 
 contract Seed is ISeed,ERC20Burnable,Ownable{
+    uint8 private _decimals;
     address private _shop;
 
     uint256 private _yield;
@@ -12,6 +13,7 @@ contract Seed is ISeed,ERC20Burnable,Ownable{
 
     constructor(string memory name,
         string memory symbol,
+        uint256 decimals,
         uint256 yield,
         uint256 matureTime) ERC20(name, symbol){
         _yield = yield;
@@ -26,6 +28,10 @@ contract Seed is ISeed,ERC20Burnable,Ownable{
 
     function shop() external view override returns (address) {
         return _shop;
+    }
+
+    function decimals() public view override(IERC20Metadata,ERC20) returns (uint8){
+        return _decimals;
     }
 
     function yield() external view override returns (uint256) {
