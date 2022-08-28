@@ -12,8 +12,6 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
 
     using SafeMath for uint256;
 
-    using EnumerableSet for EnumerableSet.AddressSet;
-    EnumerableSet.AddressSet private seedBank;
 
     constructor (ICutaverse _cutaverse,
         address _feeTo,
@@ -60,28 +58,7 @@ contract Farm is IFarm,Ownable,Pausable,ReentrancyGuard{
         emit ResetWateringRate(oldWateringRate, _wateringRate);
     }
 
-    function isBankSeed(address seed) public view returns (bool) {
-        return EnumerableSet.contains(seedBank, seed);
-    }
 
-    function getBankSeedCount() public view returns (uint256) {
-        return EnumerableSet.length(seedBank);
-    }
-
-    function getBankSeedAddress(uint256 pid) public view returns (address){
-        require(pid <= getBankSeedCount() - 1, "Not find this seed");
-        return EnumerableSet.at(seedBank, pid);
-    }
-
-    function addSeed(address seed) public onlyOwner returns (bool) {
-        require(seed != address(0), "Seed is the zero address");
-        require(!isBankSeed(seed),"The seed is already there");
-        return EnumerableSet.add(seedBank, seed);
-    }
-
-    function allBankSeed() public view returns(address[] memory){
-        return EnumerableSet.values(seedBank);
-    }
 
     function createFarm() public payable nonReentrant whenNotPaused{
         require(accountLandCount[msg.sender] == 0,"You already own a farm");
