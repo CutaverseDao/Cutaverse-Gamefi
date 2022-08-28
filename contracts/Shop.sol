@@ -127,18 +127,18 @@ contract Shop is IShop,Ownable,Pausable,ReentrancyGuard{
         uint256 timeline  = limit.timeline;
         uint256 times  = limit.times;
 
-        bool overrun = times.add(_count) <= perSeedBuyLimit;
-        bool overtime = timeline.add(24*60*60) <= block.timestamp;
+        bool isOverrun = times.add(_count) > perSeedBuyLimit;
+        bool isOvertime = timeline.add(24*60*60) > block.timestamp;
 
-        if(overtime && _count > perSeedBuyLimit){
+        if(isOvertime && _count > perSeedBuyLimit){
             return (true,true);
         }
 
-        if(!overtime && overrun){
+        if(!isOvertime && isOverrun){
             return (true,false);
         }
 
-        return (false, overtime);
+        return (false, isOvertime);
     }
 
     function isOverrunUser(address _seed, uint256 _count) internal view returns(bool,bool){
@@ -146,14 +146,14 @@ contract Shop is IShop,Ownable,Pausable,ReentrancyGuard{
         uint256 timeline  = limit.timeline;
         uint256 times  = limit.times;
 
-        bool overrun = times.add(_count) <= perUserBuyLimit;
-        bool overtime = timeline.add(24*60*60) <= block.timestamp;
+        bool isOverrun = times.add(_count) > perUserBuyLimit;
+        bool isOvertime = timeline.add(24*60*60) > block.timestamp;
 
-        if(overtime && _count > perUserBuyLimit){
+        if(isOvertime && _count > perUserBuyLimit){
             return (true,true);
         }
 
-        if(!overtime && overrun){
+        if(!isOvertime && isOverrun){
             return (true,false);
         }
 
