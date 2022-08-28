@@ -1,41 +1,31 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "./interfaces/ISeed.sol";
 
-contract Seed is ERC20,ISeed,Ownable{
-    address private _farm;
+contract Seed is ISeed,ERC20Burnable,Ownable{
+    address private _shop;
 
-    uint256 private _price;
     uint256 private _yield;
     uint256 private _matureTime;
-    uint256 private _oneDayLimit;
 
     constructor(string memory name,
         string memory symbol,
-        uint256 price,
         uint256 yield,
-        uint256 matureTime,
-        uint256 oneDayLimit) ERC20(name, symbol){
-        _price = price;
+        uint256 matureTime) ERC20(name, symbol){
         _yield = yield;
         _matureTime = matureTime;
-        _oneDayLimit = oneDayLimit;
     }
 
-    modifier onlyMinter() {
+    modifier onlyOperator() {
         require(owner() == _msgSender()
-            || (_farm != address(0) && _farm == _msgSender()), "Ownable: caller is not the minter");
+            || (_shop != address(0) && _shop == _msgSender()), "Ownable: caller is not the operator");
         _;
     }
 
-    function farm() external view override returns (address) {
-        return _farm;
-    }
-
-    function price() external view override returns (uint256) {
-        return _price;
+    function shop() external view override returns (address) {
+        return _shop;
     }
 
     function yield() external view override returns (uint256) {
@@ -46,21 +36,17 @@ contract Seed is ERC20,ISeed,Ownable{
         return _matureTime;
     }
 
-    function oneDayLimit() external view override returns (uint256) {
-        return _oneDayLimit;
+    function restShop(address shop) public override onlyOwner{
+        require(shop != address(0),"shop is the zero address");
+        _shop = shop;
     }
 
-    function restFarm(address farm) public override onlyOwner{
-        require(farm != address(0),"_farm is the zero address");
-        _farm = farm;
+    function mint(address account, uint256 amount) public override onlyOperator {
+        _mint(account, amount);
     }
 
-    function mint(address account, uint256 amount) public override onlyMinter {
-        super._mint(account, amount);
-    }
-
-    function burn(uint256 amount) public override onlyMinter{
-        super._burn(msg.sender,amount);
+    function burnFrom(address account,uint256 amount) public override(ISeed,ERC20Burnable) onlyOperator{
+        super.burnFrom(account,amount);
     }
 
 }
